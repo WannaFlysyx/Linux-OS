@@ -1,35 +1,38 @@
 # 题目内容
-1、增加Linux系统调用
-2、实现基于模块的文件系统
-3、增加Linux驱动程序
-4、统计Linux系统缺页的次数
+1、增加Linux系统调用  
+2、实现基于模块的文件系统  
+3、增加Linux驱动程序  
+4、统计Linux系统缺页的次数  
 5、进程/线程通信
 
 # 前期准备
-1、VMware Workstation pro 17、Ubuntu 20.04.2.0、Linux内核5.6.15
-2、内核存放在/usr/src目录下，使用默认的文件夹名/linux-5.6.15
-3、安装libncurses5-dev、libelf-dev、libssl-dev，命令：sudo apt install libncurses5-dev libelf-dev libssl-dev -y
-3、安装bc，命令：sudo apt install bc
+1、VMware Workstation pro 17、Ubuntu 20.04.2.0、Linux内核5.6.15  
+2、内核存放在/usr/src目录下，使用默认的文件夹名/linux-5.6.15  
+3、安装libncurses5-dev、libelf-dev、libssl-dev，命令：sudo apt install libncurses5-dev libelf-dev libssl-dev -y  
+4、安装bc，命令：sudo apt install bc
 
 # 内核编译方法
-1、彻底清理内核源代码树，命令：make mrproper
-2、创建默认配置，使用图形化界面，无需修改直接保存，命令：make menuconfig
-3、在/linux-5.6.15文件夹中执行命令：make -j$(nproc)
-4、对模块进行编译，命令：make modules -j$(nproc)
-5、安装模块，命令：make INSTALL_MOD_STRIP=1 modules_install
-6、安装内核，命令：make INSTALL_MOD_STRIP=1 install
+1、彻底清理内核源代码树，命令：make mrproper  
+2、创建默认配置，使用图形化界面，无需修改直接保存，命令：make menuconfig  
+3、在/linux-5.6.15文件夹中执行命令：make -j$(nproc)  
+4、对模块进行编译，命令：make modules -j$(nproc)  
+5、安装模块，命令：make INSTALL_MOD_STRIP=1 modules_install  
+6、安装内核，命令：make INSTALL_MOD_STRIP=1 install  
 7、关机重启，按住shift进入grub引导，选择新安装的内核开机
 
 # 实验一-系统调用
-1、在/linux-5.6.15/include/linux/syscalls.h文件中声明系统调用函数原型：asmlinkage long sys_cube(int num);
+1、在/linux-5.6.15/include/linux/syscalls.h文件中声明系统调用函数原型：asmlinkage long sys_cube(int num);  
 2、在/linux-5.6.15/ kernel/sys.c文件中书写函数如下：
+```
 SYSCALL_DEFINE1(cube,long,num){
 	long result = num*num*num;
 	printk("The result is %ld.\n",result);
 	return result;
 }
-3、在/linux-5.6.15/arch/x86/entry/syscalls/syscall_64.tbl文件中添加系统调用号：439 64	cube	__x64_sys_cube
+```
+3、在/linux-5.6.15/arch/x86/entry/syscalls/syscall_64.tbl文件中添加系统调用号：439 64	cube	__x64_sys_cube  
 4、编写函数调用：
+```
 #include <stdio.h>
 #include<linux/kernel.h>
 #include<sys/syscall.h>
@@ -40,32 +43,36 @@ int main()
 	printf("System call sys_cube Result is: %ld\n", a);
 	return 0;
 }
+```
 
 # 实验二-基于模块的文件系统
-1、确保在之前make menuconfig里面设置的File systems里面的The Extended 4（ext4）filesystem前面的标号为M，表示允许ext4文件系统模块化加载。如不是则要重新编译内核
-2、将/linux-5.6.15/fs里面的/ext4文件夹整体复制出来到其他地方并改名成为ext4edit文件夹
-3、修改ext4edit文件夹下的Makefile文件，将全部的ext4均改成ext4edit
-4、打开ext4edit文件夹下的super.c，将ext4_fs_type结构体中的.name字段改成ext4edit；同时修改MODULE_ALIAS_FS()，将其中的名字改成ext4edit
-5、打开sysfs.c，修改ext4_init_sysfs函数中kobject_create_and_add函数中的第一个参数为ext4edit
-6、打开file.c，在ext4_file_write_iter函数中增加输出语句printk(“New ext4edit is used”);
-7、在ext4edit文件夹内使用make命令，之后使用sudo insmod ext4edit.ko命令安装相应的模块
-8、使用cd/dev后，使用sudo mknod -m 777 任意名字1 b 1 0
-9、使用cd/mnt后，sudo mkdir 任意名字2
-10、使用mount /dev/任意名字1 -t ext4edit /mnt/任意名字2
-11、使用df -T -h查看磁盘空间使用情况
-12、使用cd /mnt/任意名字2后，创建文件并输入内容保存后退出
-13、使用dmesg -c查看和控制内核环缓冲区
+1、确保在之前make menuconfig里面设置的File systems里面的The Extended 4（ext4）filesystem前面的标号为M，表示允许ext4文件系统模块化加载。如不是则要重新编译内核  
+2、将/linux-5.6.15/fs里面的/ext4文件夹整体复制出来到其他地方并改名成为ext4edit文件夹  
+3、修改ext4edit文件夹下的Makefile文件，将全部的ext4均改成ext4edit  
+4、打开ext4edit文件夹下的super.c，将ext4_fs_type结构体中的.name字段改成ext4edit；同时修改MODULE_ALIAS_FS()，将其中的名字改成ext4edit  
+5、打开sysfs.c，修改ext4_init_sysfs函数中kobject_create_and_add函数中的第一个参数为ext4edit  
+6、打开file.c，在ext4_file_write_iter函数中增加输出语句printk(“New ext4edit is used”);  
+7、在ext4edit文件夹内使用make命令，之后使用sudo insmod ext4edit.ko命令安装相应的模块  
+8、使用cd/dev后，使用sudo mknod -m 777 任意名字1 b 1 0  
+9、使用cd/mnt后，sudo mkdir 任意名字2  
+10、使用mount /dev/任意名字1 -t ext4edit /mnt/任意名字2  
+11、使用df -T -h查看磁盘空间使用情况  
+12、使用cd /mnt/任意名字2后，创建文件并输入内容保存后退出  
+13、使用dmesg -c查看和控制内核环缓冲区  
 14、使用sudo mount /mnt/任意名字2卸载文件系统
 
 # 实验三-驱动程序
-1、编写Makefile和任意设备名字.c文件
+1、编写Makefile和任意设备名字.c文件  
 Makefile代码如下：
+```
 obj-m += WannaFlydev.o
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+```
 .c文件代码如下：
+```
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/stat.h>
@@ -299,9 +306,11 @@ static void __exit my_exit(void) {
 module_init(init);
 module_exit(my_exit);
 MODULE_LICENSE("GPL");
-2、编译安装后使用lsblk查看所有块设备
-3、使用sudo mkfs.ext4 /dev/任意名字对设备格式化后挂载到/mnt/任意名字文件夹上
+```
+2、编译安装后使用lsblk查看所有块设备  
+3、使用sudo mkfs.ext4 /dev/任意名字对设备格式化后挂载到/mnt/任意名字文件夹上  
 4、编写.c文件读取数据，代码如下：
+```
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -350,14 +359,16 @@ int main() {
 
     return 0;
 }
+```
 
 # 实验四-统计缺页次数
-1、在/linux-5.6.15/arch/x86/mm/fault.c中do_page_fault函数中good_area:后写入代码：pfcount++;
-2、在/linux-5.6.15/arch/x86/mm/fault.c中声明代码：unsigned long volatile pfcount;
-3、在/linux-5.6.15/ include/linux/mm.h中声明代码：extern unsigned long volatile pfcount;
-4、在/linux-5.6.15/kernel/kallsyms.c中添加代码：EXPORT_SYMBOL(pfcount);
-5、创建Makefile和.c文件
+1、在/linux-5.6.15/arch/x86/mm/fault.c中do_page_fault函数中good_area:后写入代码：pfcount++;  
+2、在/linux-5.6.15/arch/x86/mm/fault.c中声明代码：unsigned long volatile pfcount;  
+3、在/linux-5.6.15/ include/linux/mm.h中声明代码：extern unsigned long volatile pfcount;  
+4、在/linux-5.6.15/kernel/kallsyms.c中添加代码：EXPORT_SYMBOL(pfcount);  
+5、创建Makefile和.c文件  
 Makefile代码如下：
+```
 ifneq ($(KERNELRELEASE),)
 	obj-m:=readpfcount.o
 else
@@ -369,7 +380,9 @@ default:
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
 endif
+```
 .c文件代码如下：
+```
 #include <linux/module.h>
 #include <linux/sched.h>
 #include <linux/uaccess.h>
@@ -546,3 +559,4 @@ int main(int argc, char *argv[]) {
     pthread_mutex_destroy(&mutex); // 销毁互斥锁
     return 0;
 }
+```
