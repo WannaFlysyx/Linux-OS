@@ -491,9 +491,11 @@ static void __exit my_exit(void)
 module_init(my_init);
 module_exit(my_exit);
 6、编译安装后使用cat /proc/readpfcount即可
+```
 
 # 实验五-进行通信
 代码如下：
+```
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
